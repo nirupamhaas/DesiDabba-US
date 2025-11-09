@@ -4,6 +4,7 @@ import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, 
 import { MenuItem, CartItem, CartContextType } from './types';
 import { FULL_MENU } from './data/menu';
 import { searchMenuWithAI } from './services/aiService';
+import { Logo } from './components/Logo';
 
 // --- Cart Context Setup ---
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -101,8 +102,13 @@ const Navbar = () => {
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center cursor-pointer group" onClick={() => navigate('/')}>
-            <span className="text-primary font-extrabold text-2xl tracking-tight group-hover:text-orange-700 transition-colors">DesiDabba</span>
-            <span className="text-secondary font-bold text-2xl tracking-tight ml-0.5">US</span>
+            <Logo className="h-10 w-auto mr-2 group-hover:scale-105 transition-transform" />
+            <div className="flex flex-col leading-none">
+                <div className="flex">
+                    <span className="text-primary font-extrabold text-xl tracking-tight group-hover:text-orange-700 transition-colors">DesiDabba</span>
+                    <span className="text-secondary font-bold text-xl tracking-tight ml-0.5">US</span>
+                </div>
+            </div>
           </div>
 
           {/* Desktop Nav */}
@@ -792,9 +798,12 @@ const Footer = () => (
     <footer className="bg-secondary text-gray-400 py-16 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
             <div className="col-span-1 md:col-span-2">
-                <span className="text-primary font-extrabold text-3xl tracking-tight">DesiDabba</span>
-                <span className="text-white font-bold text-3xl tracking-tight ml-0.5">US</span>
-                <p className="mt-6 text-base leading-relaxed max-w-md text-gray-300">
+                <div className="flex items-center mb-4">
+                     <Logo className="h-8 w-auto mr-2 text-white" />
+                     <span className="text-primary font-extrabold text-2xl tracking-tight">DesiDabba</span>
+                     <span className="text-white font-bold text-2xl tracking-tight ml-0.5">US</span>
+                </div>
+                <p className="mt-2 text-base leading-relaxed max-w-md text-gray-300">
                     Bringing the authentic taste of India to your doorstep with our curated Desi Dabbas.
                 </p>
             </div>

@@ -1,26 +1,45 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MenuItem, AISearchResult } from "../types";
 
-// Browser-safe way to get the API key. In a real deployment, this might come
-// from a config file or a secure endpoint, but here we safely check for its
-// existence to prevent crashes.
-const getApiKey = (): string => {
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    return process.env.API_KEY;
-  }
-  return '';
-};
+// --- Lazy Initialization for the AI Client ---
+// This prevents the app from crashing on startup in a browser environment
+// where process.env is not available.
 
-const apiKey = getApiKey();
-// Initialize the AI client. It's safe to do this even with an empty key;
-// the error will be handled gracefully inside the function call.
-const ai = new GoogleGenAI({ apiKey });
+let aiClient: GoogleGenAI | null = null;
+let apiKey: string | null = null;
+
+const getAiClient = (): GoogleGenAI | null => {
+    // If we've already tried and failed, don't try again.
+    if (apiKey === '') return null;
+    
+    // If the client is already initialized, return it.
+    if (aiClient) return aiClient;
+
+    // First-time check for the API key.
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        apiKey = process.env.API_KEY;
+    } else {
+        apiKey = ''; // Mark as checked and not found
+    }
+
+    // If we found a key, create the instance.
+    if (apiKey) {
+        aiClient = new GoogleGenAI({ apiKey });
+        return aiClient;
+    }
+
+    // No key found.
+    console.warn("Gemini API Key not found. AI search will be disabled.");
+    return null;
+}
 
 export const searchMenuWithAI = async (query: string, menu: MenuItem[]): Promise<AISearchResult> => {
-  // Gracefully handle the case where the API key is not available.
-  if (!apiKey) {
-      console.warn("Gemini API Key not found. AI search is disabled.");
-      return { itemIds: [], reasoning: "AI service is currently unavailable." };
+  const ai = getAiClient(); // Attempt to get/initialize the client
+
+  // Gracefully handle the case where the AI client is not available.
+  if (!ai) {
+      return { itemIds: [], reasoning: "The AI Chef is currently unavailable." };
   }
 
   const model = "gemini-2.5-flash";

@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react
 import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, Plus, Trash2, CreditCard, CheckCircle, Circle, CheckCircle2, Lock } from 'lucide-react';
 import { MenuItem, CartItem, CartContextType } from './types';
 import { FULL_MENU } from './data/menu';
-import { searchMenuWithAI } from './services/aiService';
+// import { searchMenuWithAI } from './services/aiService'; // Temporarily disabled
 import { Logo } from './components/Logo';
 
 // --- Cart Context Setup ---
@@ -353,20 +353,20 @@ const MenuPage = () => {
   const [mealType, setMealType] = useState<MealType | null>(null);
   const [riceSelection, setRiceSelection] = useState<MenuItem | null>(null);
   
-  const [aiReasoning, setAiReasoning] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  // const [aiReasoning, setAiReasoning] = useState<string | null>(null); // AI Disabled
+  // const [isAiLoading, setIsAiLoading] = useState(false); // AI Disabled
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
       const type = params.get('type');
-      const query = params.get('q');
+      // const query = params.get('q'); // AI Disabled
 
       if (type === 'veg' || type === 'non-veg') {
           setMealType(type);
       }
-      if (query && !type) {
-           handleAiRecommend(query);
-      }
+      // if (query && !type) { // AI Disabled
+      //      handleAiRecommend(query);
+      // }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
@@ -383,39 +383,19 @@ const MenuPage = () => {
       });
   }, [mealType]);
 
-  const handleAiRecommend = async (query: string) => {
-    setIsAiLoading(true);
-    setAiReasoning("AI Chef is thinking...");
-    try {
-        // Simplified AI: just ask it to guess meal type based on query if not set
-        const lowerQ = query.toLowerCase();
-        if (lowerQ.includes('chicken') || lowerQ.includes('non') || lowerQ.includes('meat')) {
-             setMealType('non-veg');
-             setAiReasoning("Based on your request, I've started a Non-Veg Dabba for you.");
-        } else if (lowerQ.includes('veg') || lowerQ.includes('plant')) {
-             setMealType('veg');
-             setAiReasoning("Based on your request, I've started a Veg Dabba for you.");
-        } else {
-             // If vague, try to recommend a rice at least
-             const result = await searchMenuWithAI(`Recommend just one rice option from the menu for this query: ${query}`, riceOptions);
-              if (result.itemIds.length > 0) {
-                  const recommendedRice = riceOptions.find(r => r.id === result.itemIds[0]);
-                  if (recommendedRice) {
-                      setRiceSelection(recommendedRice);
-                      if (!mealType) setMealType('veg'); // Default to veg if still unknown
-                      setAiReasoning(`👨‍🍳 Chef's Tip: ${result.reasoning}`);
-                  }
-              } else {
-                  setAiReasoning("I couldn't decide on a meal type for you. Please choose below!");
-              }
-        }
-
-    } catch (e) {
-        setAiReasoning(null);
-    } finally {
-        setIsAiLoading(false);
-    }
-  };
+  // --- AI FUNCTIONALITY DISABLED TO PREVENT CRASH ---
+  // const handleAiRecommend = async (query: string) => {
+  //   setIsAiLoading(true);
+  //   setAiReasoning("AI Chef is thinking...");
+  //   try {
+  //       const result = await searchMenuWithAI(`Recommend one meal type (veg or non-veg) and one rice option for this query: ${query}`, FULL_MENU);
+  //       // ... logic here ...
+  //   } catch (e) {
+  //       setAiReasoning(null);
+  //   } finally {
+  //       setIsAiLoading(false);
+  //   }
+  // };
 
   const handleRiceSelect = (item: MenuItem) => {
       if (riceSelection?.id === item.id) {
@@ -452,7 +432,7 @@ const MenuPage = () => {
   const resetBuilder = () => {
       setMealType(null);
       setRiceSelection(null);
-      setAiReasoning(null);
+      // setAiReasoning(null); // AI Disabled
       navigate('/menu');
   };
 
@@ -463,7 +443,8 @@ const MenuPage = () => {
               <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">Build Your Dabba</h1>
               <p className="text-xl text-gray-600 mb-12 text-center max-w-md">Choose your meal preference to begin.</p>
               
-              {/* AI Search Bar */}
+              {/* --- AI SEARCH BAR DISABLED --- */}
+              {/*
               <div className="w-full max-w-md mb-12">
                  <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); handleAiRecommend(fd.get('q') as string); }} className="relative">
                     <input name="q" type="text" placeholder="E.g., 'hungry for spicy chicken'..." className="w-full pl-12 pr-4 py-4 rounded-full border-0 shadow-md focus:ring-2 focus:ring-primary" />
@@ -472,6 +453,7 @@ const MenuPage = () => {
                  {isAiLoading && <p className="text-center mt-2 text-primary animate-pulse">Consulting the chef...</p>}
                   {aiReasoning && <p className="text-center mt-2 text-blue-600 text-sm">{aiReasoning}</p>}
               </div>
+              */}
 
               <div className="grid sm:grid-cols-2 gap-8 w-full max-w-4xl">
                   <button 
@@ -535,12 +517,14 @@ const MenuPage = () => {
             </button>
         </div>
 
+        {/* AI REASONING DISABLED
         {aiReasoning && (
             <div className="mb-8 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start animate-[fadeIn_0.5s]">
                 <Sparkles className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
                 <p className="text-blue-800">{aiReasoning}</p>
             </div>
         )}
+        */}
 
         <div className="space-y-6">
             {/* Step 1: Rice Selection (Interactive) */}

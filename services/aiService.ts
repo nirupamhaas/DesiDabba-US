@@ -1,22 +1,31 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MenuItem, AISearchResult } from "../types";
 
-// Initialize standard Gemini client
-// NOTE: We only initialize this when needed to ensure we have the latest key if it changes, 
-// but for this simple app it's okay to hold the reference if the env var is static.
-// Following best practices, we'll instantiate inside the call if we expect dynamic keys,
-// but here we assume a static process.env.API_KEY.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Browser-safe way to get the API key. In a real deployment, this might come
+// from a config file or a secure endpoint, but here we safely check for its
+// existence to prevent crashes.
+const getApiKey = (): string => {
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
+// Initialize the AI client. It's safe to do this even with an empty key;
+// the error will be handled gracefully inside the function call.
+const ai = new GoogleGenAI({ apiKey });
 
 export const searchMenuWithAI = async (query: string, menu: MenuItem[]): Promise<AISearchResult> => {
-  if (!process.env.API_KEY) {
-      console.warn("Gemini API Key not found. Returning empty results.");
-      return { itemIds: [], reasoning: "AI service unavailable (missing API key)." };
+  // Gracefully handle the case where the API key is not available.
+  if (!apiKey) {
+      console.warn("Gemini API Key not found. AI search is disabled.");
+      return { itemIds: [], reasoning: "AI service is currently unavailable." };
   }
 
   const model = "gemini-2.5-flash";
 
-  // Simplify menu for token efficiency, only sending what's needed for decision making
+  // Simplify menu for token efficiency
   const simplifiedMenu = menu.map(item => ({
     id: item.id,
     name: item.name,

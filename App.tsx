@@ -1,10 +1,58 @@
+
 import React, { useState, createContext, useContext, useEffect, useCallback, useMemo } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, Plus, Trash2, CreditCard, CheckCircle, Circle, CheckCircle2, Lock } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, Plus, Trash2, CreditCard, CheckCircle, Circle, CheckCircle2, Lock, Truck, Leaf, Droplet } from 'lucide-react';
 import { MenuItem, CartItem, CartContextType } from './types';
 import { FULL_MENU } from './data/menu';
-// import { searchMenuWithAI } from './services/aiService'; // Temporarily disabled
+import { saveImageToDb, getAllImagesFromDb } from './services/imageDb';
 import { Logo } from './components/Logo';
+
+// --- Image Context Setup ---
+interface ImageContextType {
+  images: Record<string, string>;
+  saveImage: (id: string, base64: string) => Promise<void>;
+}
+
+const ImageContext = createContext<ImageContextType | undefined>(undefined);
+
+export const useImages = () => {
+  const context = useContext(ImageContext);
+  if (!context) {
+    throw new Error('useImages must be used within an ImageProvider');
+  }
+  return context;
+};
+
+const ImageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [images, setImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const initImages = async () => {
+      try {
+        const dbImages = await getAllImagesFromDb();
+        setImages(dbImages);
+      } catch (e) {
+        console.error("Failed to load images from DB", e);
+      }
+    };
+    initImages();
+  }, []);
+
+  const saveImage = useCallback(async (id: string, base64: string) => {
+    try {
+      await saveImageToDb(id, base64);
+      setImages(prev => ({ ...prev, [id]: base64 }));
+    } catch (e) {
+      console.error("Failed to save image", e);
+    }
+  }, []);
+
+  return (
+    <ImageContext.Provider value={{ images, saveImage }}>
+      {children}
+    </ImageContext.Provider>
+  );
+};
 
 // --- Cart Context Setup ---
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -288,6 +336,19 @@ const CartDrawer = () => {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { images: generatedImages } = useImages();
+
+  // Configuration for the "Every Dabba Includes" section
+  // We map the generic names to specific Menu Items IDs to fetch their photos
+  const includedItems = useMemo(() => [
+    { label: 'Roti', id: 'b1' },
+    { label: 'Dal', id: 'c1' },
+    { label: 'Rasam', id: 's1' },
+    { label: 'Curd', id: 's2' },
+    { label: 'Sweet', id: 'd1' },
+    { label: 'Curry', id: 'c3' }, // Veg Curry
+    { label: 'Fry', id: 'st1' },  // Veg Fry
+  ], []);
 
   return (
     <div className="flex flex-col min-h-screen bg-orange-50">
@@ -296,7 +357,7 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-black/60 z-0"></div>
         <div className="absolute inset-0 overflow-hidden opacity-40 z-[-1]">
             {/* Use a more specifically Indian food spread background */}
-            <img src="https://loremflickr.com/1920/1080/indian,food,thali?random=100" alt="Indian Food Spread" className="w-full h-full object-cover scale-105 blur-[2px]" />
+            <img src="https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=1920&q=80" alt="Indian Food Spread" className="w-full h-full object-cover scale-105 blur-[2px]" />
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto">
@@ -313,30 +374,76 @@ const HomePage = () => {
                   onClick={() => navigate('/menu?type=veg')}
                   className="px-8 py-4 bg-green-600 text-white rounded-full font-bold text-lg hover:bg-green-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
               >
-                  Order Veg Dabba <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-sm">$8.99</span>
+                  Order Veg Dabba <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-sm">$7.99</span>
               </button>
               <button
                   onClick={() => navigate('/menu?type=non-veg')}
                   className="px-8 py-4 bg-primary text-white rounded-full font-bold text-lg hover:bg-orange-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
               >
-                  Order Non-Veg Dabba <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-sm">$9.99</span>
+                  Order Non-Veg Dabba <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-sm">$8.99</span>
               </button>
           </div>
         </div>
       </section>
 
+      {/* Features / USP Section */}
+      <section className="relative z-20 -mt-20 px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* USP 1: Avocado Oil - Green Theme (Left) */}
+                <div className="flex flex-col items-center text-center bg-white rounded-2xl shadow-lg border-b-4 border-green-500 p-8 hover:-translate-y-1 transition-all duration-300">
+                    <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                        <Droplet className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">100% Pure Avocado Oil</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">We cook exclusively with <strong className="text-green-700">Chosen Foods™</strong> Avocado Oil for a healthier, lighter taste.</p>
+                </div>
+
+                {/* USP 2: Free Delivery - Orange Theme (Center) */}
+                <div className="flex flex-col items-center text-center bg-white rounded-2xl shadow-lg border-b-4 border-orange-500 p-8 hover:-translate-y-1 transition-all duration-300">
+                    <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                        <Truck className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Free Delivery</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Authentic Indian meals delivered to your specific pickup point at no extra cost.</p>
+                </div>
+
+                {/* USP 3: Eco Trays - Emerald/Teal Theme (Right) */}
+                <div className="flex flex-col items-center text-center bg-white rounded-2xl shadow-lg border-b-4 border-emerald-600 p-8 hover:-translate-y-1 transition-all duration-300">
+                    <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                        <Leaf className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Eco-Friendly Trays</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">Served in 100% compostable, microwaveable fiber trays. Certified PFAS-Free and BPA-Free.</p>
+                </div>
+            </div>
+        </div>
+      </section>
+
       {/* Info Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 pt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-8">Every Dabba Includes</h2>
-               <div className="flex flex-wrap justify-center gap-4 md:gap-8">
-                    {['Roti', 'Dal', 'Rasam', 'Curd', 'Sweet', 'Curry', 'Fry'].map(item => (
-                        <div key={item} className="px-6 py-3 bg-orange-50 rounded-full font-medium text-gray-700 shadow-sm border border-orange-100">
-                            {item}
-                        </div>
-                    ))}
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-12">Every Dabba Includes</h2>
+               <div className="flex flex-wrap justify-center gap-8 md:gap-10">
+                    {includedItems.map((item) => {
+                        const menuItem = FULL_MENU.find(m => m.id === item.id);
+                        const imgSrc = generatedImages[item.id] || menuItem?.imageUrl;
+                        
+                        return (
+                            <div key={item.label} className="flex flex-col items-center group">
+                                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-amber-200 shadow-md overflow-hidden mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:border-amber-400 bg-white">
+                                    {imgSrc && (
+                                        <img src={imgSrc} alt={item.label} className="w-full h-full object-cover" />
+                                    )}
+                                </div>
+                                <div className="px-4 py-1 rounded-full font-bold text-base bg-amber-100 text-amber-900 shadow-sm">
+                                    {item.label}
+                                </div>
+                            </div>
+                        );
+                    })}
                </div>
-               <p className="text-gray-500 mt-6">Just choose your rice and we'll pack the rest!</p>
+               <p className="text-gray-500 mt-10 text-lg">Just choose your rice and we'll pack the rest!</p>
           </div>
       </section>
     </div>
@@ -349,24 +456,18 @@ const MenuPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { images: generatedImages } = useImages();
   
   const [mealType, setMealType] = useState<MealType | null>(null);
   const [riceSelection, setRiceSelection] = useState<MenuItem | null>(null);
-  
-  // const [aiReasoning, setAiReasoning] = useState<string | null>(null); // AI Disabled
-  // const [isAiLoading, setIsAiLoading] = useState(false); // AI Disabled
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
       const type = params.get('type');
-      // const query = params.get('q'); // AI Disabled
 
       if (type === 'veg' || type === 'non-veg') {
           setMealType(type);
       }
-      // if (query && !type) { // AI Disabled
-      //      handleAiRecommend(query);
-      // }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
@@ -383,20 +484,6 @@ const MenuPage = () => {
       });
   }, [mealType]);
 
-  // --- AI FUNCTIONALITY DISABLED TO PREVENT CRASH ---
-  // const handleAiRecommend = async (query: string) => {
-  //   setIsAiLoading(true);
-  //   setAiReasoning("AI Chef is thinking...");
-  //   try {
-  //       const result = await searchMenuWithAI(`Recommend one meal type (veg or non-veg) and one rice option for this query: ${query}`, FULL_MENU);
-  //       // ... logic here ...
-  //   } catch (e) {
-  //       setAiReasoning(null);
-  //   } finally {
-  //       setIsAiLoading(false);
-  //   }
-  // };
-
   const handleRiceSelect = (item: MenuItem) => {
       if (riceSelection?.id === item.id) {
           setRiceSelection(null); // Unselect if already selected
@@ -408,7 +495,7 @@ const MenuPage = () => {
   const handleAddToCart = () => {
       if (!mealType || !riceSelection) return;
 
-      const price = mealType === 'veg' ? 8.99 : 9.99;
+      const price = mealType === 'veg' ? 7.99 : 8.99;
       const allComponents = [...standardItems, riceSelection];
 
       const comboItem: CartItem = {
@@ -417,9 +504,9 @@ const MenuPage = () => {
           description: `Complete meal with ${riceSelection.name}`,
           price: price,
           category: 'Meal Deal',
-          imageUrl: mealType === 'veg' 
-            ? 'https://loremflickr.com/600/400/vegetarian,thali,indian?random=101'
-            : 'https://loremflickr.com/600/400/chicken,thali,indian?random=102',
+          imageUrl: generatedImages[riceSelection.id] || (mealType === 'veg' 
+            ? 'https://images.unsplash.com/photo-1514517220017-8ce97a34a7b6?auto=format&fit=crop&w=600&q=80'
+            : 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80'),
           tags: [mealType, 'combo', 'thali', 'dabba'],
           quantity: 1,
           components: allComponents
@@ -432,7 +519,6 @@ const MenuPage = () => {
   const resetBuilder = () => {
       setMealType(null);
       setRiceSelection(null);
-      // setAiReasoning(null); // AI Disabled
       navigate('/menu');
   };
 
@@ -443,18 +529,6 @@ const MenuPage = () => {
               <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">Build Your Dabba</h1>
               <p className="text-xl text-gray-600 mb-12 text-center max-w-md">Choose your meal preference to begin.</p>
               
-              {/* --- AI SEARCH BAR DISABLED --- */}
-              {/*
-              <div className="w-full max-w-md mb-12">
-                 <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); handleAiRecommend(fd.get('q') as string); }} className="relative">
-                    <input name="q" type="text" placeholder="E.g., 'hungry for spicy chicken'..." className="w-full pl-12 pr-4 py-4 rounded-full border-0 shadow-md focus:ring-2 focus:ring-primary" />
-                    <Sparkles className="absolute left-4 top-4 text-primary w-6 h-6" />
-                 </form>
-                 {isAiLoading && <p className="text-center mt-2 text-primary animate-pulse">Consulting the chef...</p>}
-                  {aiReasoning && <p className="text-center mt-2 text-blue-600 text-sm">{aiReasoning}</p>}
-              </div>
-              */}
-
               <div className="grid sm:grid-cols-2 gap-8 w-full max-w-4xl">
                   <button 
                       onClick={() => setMealType('veg')}
@@ -469,7 +543,7 @@ const MenuPage = () => {
                           <p className="text-gray-600 mb-4">Pure vegetarian curries & sides.</p>
                       </div>
                       <div className="relative z-10 flex justify-between items-center">
-                          <span className="text-3xl font-extrabold text-green-600">$8.99</span>
+                          <span className="text-3xl font-extrabold text-green-600">$7.99</span>
                           <span className="flex items-center font-bold text-green-700 group-hover:translate-x-2 transition-transform">
                               Select <ChevronRight className="ml-1" />
                           </span>
@@ -489,7 +563,7 @@ const MenuPage = () => {
                           <p className="text-gray-600 mb-4">Includes chicken curry & fry.</p>
                       </div>
                       <div className="relative z-10 flex justify-between items-center">
-                          <span className="text-3xl font-extrabold text-primary">$9.99</span>
+                          <span className="text-3xl font-extrabold text-primary">$8.99</span>
                            <span className="flex items-center font-bold text-primary group-hover:translate-x-2 transition-transform">
                               Select <ChevronRight className="ml-1" />
                           </span>
@@ -504,27 +578,20 @@ const MenuPage = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen pb-32">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-2xl shadow-sm border border-orange-100 sticky top-20 z-30">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 bg-white p-4 rounded-2xl shadow-sm border border-orange-100 sticky top-20 z-30 gap-4">
             <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
                     {mealType === 'veg' ? <Circle className="w-5 h-5 text-green-600 fill-current mr-2" /> : <Circle className="w-5 h-5 text-red-600 fill-current mr-2" />}
                     {mealType === 'veg' ? 'Vegetarian' : 'Non-Veg'} Dabba
                 </h1>
-                <p className="text-primary font-extrabold text-lg mt-1">${mealType === 'veg' ? '8.99' : '9.99'}</p>
+                <p className="text-primary font-extrabold text-lg mt-1">${mealType === 'veg' ? '7.99' : '8.99'}</p>
             </div>
-            <button onClick={resetBuilder} className="text-sm text-gray-500 hover:text-gray-700 underline">
-                Change Type
-            </button>
+            <div className="flex gap-4 items-center flex-wrap">
+                <button onClick={resetBuilder} className="text-sm text-gray-500 hover:text-gray-700 underline">
+                    Change Type
+                </button>
+            </div>
         </div>
-
-        {/* AI REASONING DISABLED
-        {aiReasoning && (
-            <div className="mb-8 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start animate-[fadeIn_0.5s]">
-                <Sparkles className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
-                <p className="text-blue-800">{aiReasoning}</p>
-            </div>
-        )}
-        */}
 
         <div className="space-y-6">
             {/* Step 1: Rice Selection (Interactive) */}
@@ -557,8 +624,13 @@ const MenuPage = () => {
                                 </div>
                                 <p className="text-sm text-gray-600 line-clamp-3">{item.description}</p>
                             </div>
-                             <div className="mt-4 h-32 rounded-lg overflow-hidden">
-                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                             <div className="mt-4 h-32 rounded-lg overflow-hidden relative bg-gray-100">
+                                <img src={generatedImages[item.id] || item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-all duration-500" />
+                                {generatedImages[item.id] && (
+                                    <div className="absolute bottom-1 right-1 bg-purple-600/80 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md flex items-center">
+                                        <Sparkles className="w-3 h-3 mr-1" /> AI
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -581,8 +653,13 @@ const MenuPage = () => {
                                     <p className="font-bold text-gray-900 line-clamp-1">{item.name}</p>
                                     <p className="text-xs text-gray-500 capitalize">{item.category}</p>
                                 </div>
-                                <div className="mt-auto h-32 w-full rounded-lg overflow-hidden bg-gray-100">
-                                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform hover:scale-105 duration-500" />
+                                <div className="mt-auto h-32 w-full rounded-lg overflow-hidden bg-gray-100 relative">
+                                     <img src={generatedImages[item.id] || item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform hover:scale-105 duration-500" />
+                                      {generatedImages[item.id] && (
+                                        <div className="absolute bottom-1 right-1 bg-purple-600/80 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md flex items-center z-10">
+                                            <Sparkles className="w-3 h-3 mr-1" /> AI
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -596,7 +673,7 @@ const MenuPage = () => {
             <div className="max-w-4xl mx-auto flex items-center justify-between">
                 <div>
                     <p className="text-sm text-gray-500">Total</p>
-                    <p className="text-2xl font-extrabold text-gray-900">${mealType === 'veg' ? '8.99' : '9.99'}</p>
+                    <p className="text-2xl font-extrabold text-gray-900">${mealType === 'veg' ? '7.99' : '8.99'}</p>
                 </div>
                 <button
                     disabled={!riceSelection}
@@ -617,6 +694,37 @@ const CheckoutPage = () => {
     const navigate = useNavigate();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [confirmedDate, setConfirmedDate] = useState('');
+
+    const TAX_RATE = 0.0825; // Austin, TX Sales Tax
+    const taxAmount = cartTotal * TAX_RATE;
+    const finalTotal = cartTotal + taxAmount;
+    
+    const minDate = useMemo(() => {
+        const now = new Date();
+        const centralTimeFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Chicago',
+            hour: 'numeric',
+            hour12: false,
+        });
+        const centralHour = parseInt(centralTimeFormatter.format(now), 10);
+
+        // Cutoff time is 10 AM Central Time.
+        if (centralHour >= 10) {
+            now.setDate(now.getDate() + 1);
+        }
+        return now.toISOString().split('T')[0];
+    }, []);
+
+    const [deliveryDate, setDeliveryDate] = useState(minDate);
+
+
+    const pickupLocations = [
+      { id: 'p1', name: '13929 Center Lake Dr, Austin, TX 78753 (TCS, Wipro, Cognizant, Qualcomm)' },
+      { id: 'p2', name: '507 E Howard Ln, Austin, TX 78753 (Infosys)' },
+      { id: 'p3', name: '600 Center Ridge Dr, Austin, TX 78753 (Capgemini)' },
+      { id: 'p4', name: '13201 McCallen Pass, Austin, TX 78753 (General Motors)' },
+    ];
 
     useEffect(() => {
         if (items.length === 0 && !isSuccess) {
@@ -627,6 +735,7 @@ const CheckoutPage = () => {
     const handleMockPayment = (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
+        setConfirmedDate(deliveryDate);
         setTimeout(() => {
             setIsProcessing(false);
             setIsSuccess(true);
@@ -635,14 +744,21 @@ const CheckoutPage = () => {
     };
 
     if (isSuccess) {
+        const formattedDate = new Date(confirmedDate + 'T12:00:00Z').toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
         return (
             <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center bg-orange-50">
                 <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 text-green-600 shadow-sm animate-[bounce_1s_ease-in-out]">
                     <CheckCircle className="w-14 h-14" />
                 </div>
                 <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Namaste! Order Confirmed.</h1>
-                <p className="text-xl text-gray-600 mb-12 max-w-md leading-relaxed">
-                    Your Desi Dabba is being prepared with care. Estimated delivery: <span className="font-bold text-primary">35-45 mins</span>.
+                <p className="text-xl text-gray-600 mb-12 max-w-lg leading-relaxed">
+                    Your Desi Dabba is being prepared with care. It will be ready for pickup on <span className="font-bold text-primary">{formattedDate} by 12:00 PM Central Time</span>.
                 </p>
                 <button
                     onClick={() => navigate('/')}
@@ -666,7 +782,7 @@ const CheckoutPage = () => {
                 <section className="lg:col-span-7 bg-white p-8 rounded-3xl shadow-sm border border-orange-100 mb-8 lg:mb-0">
                      <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                          <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
-                         Delivery Details
+                         Pickup Details
                      </h2>
                      <form onSubmit={handleMockPayment} className="space-y-5">
                         <div className="grid grid-cols-2 gap-5">
@@ -679,22 +795,44 @@ const CheckoutPage = () => {
                                 <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                             </div>
                         </div>
+
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Street Address</label>
-                            <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-5">
-                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">City</label>
-                                <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Postal Code</label>
-                                <input required type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                            <input required type="email" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                         </div>
 
-                        <h2 className="text-xl font-bold text-gray-900 mt-10 mb-6 flex items-center">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Phone Number <span className="text-xs text-gray-500 font-medium">(Optional)</span></label>
+                            <input type="tel" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Pickup Point</label>
+                            <select required defaultValue="" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all appearance-none">
+                                <option value="" disabled>Select a location...</option>
+                                {pickupLocations.map(loc => (
+                                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label htmlFor="deliveryDate" className="block text-sm font-bold text-gray-700 mb-2">Pickup Date</label>
+                            <input
+                                required
+                                type="date"
+                                id="deliveryDate"
+                                value={deliveryDate}
+                                onChange={(e) => setDeliveryDate(e.target.value)}
+                                min={minDate}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                            />
+                            <p className="text-xs text-gray-500 mt-2 px-1">
+                                Order by <span className="font-bold">10 AM Central Time</span> for same-day pickup. Your order will be ready at the pickup point by <span className="font-bold">12:00 PM Central Time</span>.
+                            </p>
+                        </div>
+
+                        <h2 className="text-xl font-bold text-gray-900 pt-6 mt-6 border-t border-gray-100 mb-6 flex items-center">
                              <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
                              Payment Method
                         </h2>
@@ -722,7 +860,7 @@ const CheckoutPage = () => {
                             {isProcessing ? (
                                 <><Sparkles className="animate-spin mr-2 h-5 w-5" /> Processing...</>
                             ) : (
-                                <>Pay ${(cartTotal + 3.99).toFixed(2)}</>
+                                <>Pay ${finalTotal.toFixed(2)}</>
                             )}
                         </button>
                      </form>
@@ -760,16 +898,16 @@ const CheckoutPage = () => {
                     </ul>
                     <div className="space-y-3 border-t-2 border-dashed border-gray-200 pt-6">
                         <div className="flex justify-between text-gray-600">
-                            <p>Item Total</p>
+                            <p>Subtotal</p>
                             <p className="font-medium">${cartTotal.toFixed(2)}</p>
                         </div>
                         <div className="flex justify-between text-gray-600">
-                            <p>Delivery Fee</p>
-                            <p className="font-medium">$3.99</p>
+                            <p>Sales Tax (8.25%)</p>
+                            <p className="font-medium">${taxAmount.toFixed(2)}</p>
                         </div>
                         <div className="flex justify-between text-2xl font-extrabold text-gray-900 pt-4 border-t border-gray-200 mt-6">
                             <p>Total</p>
-                            <p className="text-primary">${(cartTotal + 3.99).toFixed(2)}</p>
+                            <p className="text-primary">${finalTotal.toFixed(2)}</p>
                         </div>
                     </div>
                 </section>
@@ -823,23 +961,25 @@ const ScrollToTop = () => {
 
 const App = () => {
   return (
-    <CartProvider>
-      <HashRouter>
-        <ScrollToTop />
-        <div className="flex flex-col min-h-screen bg-orange-50/30 font-sans">
-          <Navbar />
-          <CartDrawer />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/menu" element={<MenuPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </HashRouter>
-    </CartProvider>
+    <ImageProvider>
+        <CartProvider>
+        <HashRouter>
+            <ScrollToTop />
+            <div className="flex flex-col min-h-screen bg-orange-50/30 font-sans">
+            <Navbar />
+            <CartDrawer />
+            <main className="flex-grow">
+                <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/menu" element={<MenuPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                </Routes>
+            </main>
+            <Footer />
+            </div>
+        </HashRouter>
+        </CartProvider>
+    </ImageProvider>
   );
 };
 

@@ -1,11 +1,60 @@
-
 import React, { useState, createContext, useContext, useEffect, useCallback, useMemo } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, Plus, Trash2, CreditCard, CheckCircle, Circle, CheckCircle2, Lock, Truck, Leaf, Droplet } from 'lucide-react';
+import { ShoppingBag, Menu as MenuIcon, X, Sparkles, Home, ChevronRight, Minus, Plus, Trash2, CreditCard, CheckCircle, Circle, CheckCircle2, Lock, Truck, Leaf, Droplet, AlertCircle } from 'lucide-react';
 import { MenuItem, CartItem, CartContextType } from './types';
 import { FULL_MENU } from './data/menu';
 import { saveImageToDb, getAllImagesFromDb } from './services/imageDb';
 import { Logo } from './components/Logo';
+
+// --- Error Boundary ---
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-orange-50 p-4 text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+          <p className="text-gray-600 mb-6">We're having trouble loading the application.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-primary text-white rounded-full font-bold shadow-md hover:bg-orange-700 transition-colors"
+          >
+            Reload Page
+          </button>
+          {this.state.error && (
+            <div className="mt-8 p-4 bg-gray-100 rounded-lg border border-gray-200 max-w-md overflow-auto text-left">
+               <p className="font-mono text-xs text-red-600 break-all">{this.state.error.toString()}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // --- Image Context Setup ---
 interface ImageContextType {
@@ -960,27 +1009,28 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
-  // Production deployment safeguard
   return (
-    <ImageProvider>
-        <CartProvider>
-        <HashRouter>
-            <ScrollToTop />
-            <div className="flex flex-col min-h-screen bg-orange-50/30 font-sans">
-            <Navbar />
-            <CartDrawer />
-            <main className="flex-grow">
-                <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/menu" element={<MenuPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-                </Routes>
-            </main>
-            <Footer />
-            </div>
-        </HashRouter>
-        </CartProvider>
-    </ImageProvider>
+    <ErrorBoundary>
+        <ImageProvider>
+            <CartProvider>
+            <HashRouter>
+                <ScrollToTop />
+                <div className="flex flex-col min-h-screen bg-orange-50/30 font-sans">
+                <Navbar />
+                <CartDrawer />
+                <main className="flex-grow">
+                    <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/menu" element={<MenuPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    </Routes>
+                </main>
+                <Footer />
+                </div>
+            </HashRouter>
+            </CartProvider>
+        </ImageProvider>
+    </ErrorBoundary>
   );
 };
 

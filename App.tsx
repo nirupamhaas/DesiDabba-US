@@ -960,6 +960,7 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
+  // Production deployment safeguard
   return (
     <ImageProvider>
         <CartProvider>

@@ -1,9 +1,6 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 /**
  * Generates a food image using Gemini 2.5 Flash Image (Nano Banana).
  * @param itemName Name of the item to generate
@@ -12,6 +9,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
  */
 export const generateFoodImage = async (itemName: string, description: string): Promise<string | null> => {
   try {
+    // Initialize client lazily to avoid runtime errors during app startup if key is missing
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const prompt = `Professional food photography of ${itemName}. ${description}. Close up, high resolution, studio lighting, photorealistic, 4k, appetizing, vibrant colors.`;
 
     const response = await ai.models.generateContent({
